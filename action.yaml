@@ -50,4 +50,4 @@ runs:
       if: always() && inputs.issue_number != ''
       with:
         issue_number: ${{ inputs.issue_number }}
-        status: ${{ job.status }}
+        status: ${{ github.action_status }}
