@@ -1,0 +1,52 @@
+name: Release document to GitHub Pages
+description: Release document to GitHub Pages
+author: Shunsuke Suzuki
+branding:
+  icon: git-commit
+  color: blue
+inputs:
+  publish_branch:
+    description: 'Set a target branch for deployment.'
+    required: false
+    default: gh-pages
+  publish_dir:
+    description: 'Set an input directory for deployment.'
+    required: false
+    default: 'public'
+  destination_dir:
+    description: 'Set an destination subdirectory for deployment.'
+    required: false
+    default: ''
+  repository:
+    description: 'Set an external repository (owner/repo).'
+    required: false
+    default: ${{ github.repository }}
+  issue_number:
+    description: Issue to number to notify the failure
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: ${{ inputs.repository }}
+        persist-credentials: false
+    - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+      with:
+        node-version: '22'
+        cache: 'npm'
+    - run: npm ci
+      shell: bash
+    - run: npm run build
+      shell: bash
+
+    - uses: suzuki-shunsuke/gh-pages-action@6229a3f8d89389da5c234aab3b37ba51a7fee3f6 # v0.0.1
+      with:
+        publish_dir: ${{ inputs.publish_dir }}
+        destination_dir: ${ inputs.destination_dir }
+
+    - uses: suzuki-shunsuke/notify-workflow-error-action@e5e8817e62eb122231d162dbc8309c4d05a21b2e # v0.1.0
+      if: always() && inputs.issue_number != ''
+      with:
+        issue_number: ${{ inputs.issue_number }}
+        status: ${{ job.status }}
