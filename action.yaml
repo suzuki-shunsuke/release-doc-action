@@ -41,6 +41,7 @@ runs:
       shell: bash
 
     - uses: suzuki-shunsuke/gh-pages-action@6229a3f8d89389da5c234aab3b37ba51a7fee3f6 # v0.0.1
+      if: github.event_name != 'pul_request'
       with:
         publish_dir: ${{ inputs.publish_dir }}
         destination_dir: ${ inputs.destination_dir }
