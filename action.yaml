@@ -6,19 +6,23 @@ branding:
   color: blue
 inputs:
   publish_branch:
-    description: 'Set a target branch for deployment.'
+    description: A target branch for deployment
     required: false
     default: gh-pages
+  source_dir:
+    description: A source directory. Commands like npm run build will be executed in this directory
+    required: false
+    default: ${{github.workspace}}
   publish_dir:
-    description: 'Set an input directory for deployment.'
+    description: A directory to publish the built files
     required: false
     default: 'public'
   destination_dir:
-    description: 'Set an destination subdirectory for deployment.'
+    description: A destination subdirectory for deployment
     required: false
     default: ''
   repository:
-    description: 'Set an external repository (owner/repo).'
+    description: An external repository (owner/repo).
     required: false
     default: ${{ github.repository }}
   issue_number:
@@ -36,8 +40,10 @@ runs:
         node-version: '22'
         cache: 'npm'
     - run: npm ci
+      working-directory: ${{ inputs.source_dir }}
       shell: bash
     - run: npm run build
+      working-directory: ${{ inputs.source_dir }}
       shell: bash
 
     - uses: suzuki-shunsuke/gh-pages-action@5df123b4f8ae31edbe71bcc9a28a9598c29b1011 # v0.0.6
