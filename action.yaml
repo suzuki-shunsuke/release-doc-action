@@ -54,7 +54,7 @@ runs:
         destination_dir: ${{ inputs.destination_dir }}
 
     - uses: suzuki-shunsuke/notify-workflow-error-action@e5e8817e62eb122231d162dbc8309c4d05a21b2e # v0.1.0
-      if: always() && inputs.issue_number != ''
+      if: always() && inputs.issue_number != '' && github.event_name != 'pull_request'
       with:
         issue_number: ${{ inputs.issue_number }}
         status: ${{ github.action_status }}
