@@ -1,0 +1,89 @@
+---
+name: Test document
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: The repository (owner/repo) where the document exists. If empty, the repository where the workflow runs is used
+        required: false
+        type: string
+      ref:
+        description: The git ref to build. If empty, the default ref of actions/checkout is used, which is the merge commit on pull_request events
+        required: false
+        type: string
+      working_directory:
+        description: The directory where package.json and package-lock.json exist
+        required: false
+        type: string
+        default: website
+      node-version-file:
+        required: false
+        type: string
+        default: website/.node-version
+      paths:
+        description: |
+          Newline-separated glob patterns of files.
+          On pull_request events, the document is built only if the pull request changes any of these files.
+          If empty, the document is always built.
+          Set this to empty if the document exists in another repository, because changed files of the pull request are irrelevant.
+        required: false
+        type: string
+        default: website/**
+    secrets:
+      TAKUMI_GUARD_BOT_ID:
+        required: false
+
+permissions: {}
+
+jobs:
+  path-filter:
+    # Get changed files to skip building the document if it isn't changed.
+    if: inputs.paths != '' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+    timeout-minutes: 10
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: read # To get pull requests of private repository
+    outputs:
+      changed: ${{steps.changes.outputs.document}}
+    steps:
+      # inputs.paths is multiline, so it can't be embedded in the input filters directly.
+      # Write the filter to a file instead.
+      - name: Generate the filter file
+        id: filter
+        env:
+          PATHS: ${{inputs.paths}}
+        run: |
+          file=$RUNNER_TEMP/release-doc-action/filters.yaml
+          mkdir -p "$(dirname "$file")"
+          echo "document:" > "$file"
+          while IFS= read -r p; do
+            if [ -n "$p" ]; then
+              # Quote patterns as YAML single-quoted strings
+              printf "  - '%s'\n" "${p//\'/\'\'}" >> "$file"
+            fi
+          done <<< "$PATHS"
+          cat "$file"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          filters: ${{steps.filter.outputs.file}}
+
+  build:
+    needs: path-filter
+    # Run if the path-filter job is skipped, which means the filter is disabled
+    if: |
+      !cancelled() && (needs.path-filter.result == 'skipped' || needs.path-filter.outputs.changed == 'true')
+    uses: $/.github/workflows/build.yaml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      repository: ${{inputs.repository}}
+      ref: ${{inputs.ref}}
+      working_directory: ${{inputs.working_directory}}
+      node-version-file: ${{inputs.node-version-file}}
+      artifact_name: document-test
+    secrets:
+      TAKUMI_GUARD_BOT_ID: ${{secrets.TAKUMI_GUARD_BOT_ID}}
