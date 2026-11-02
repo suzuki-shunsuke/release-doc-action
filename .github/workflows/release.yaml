@@ -1,0 +1,121 @@
+---
+name: Release document
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: The repository (owner/repo) where the document exists. If empty, the repository where the workflow runs is used
+        required: false
+        type: string
+      ref:
+        description: The git ref to build. If empty, the default ref of actions/checkout is used
+        required: false
+        type: string
+      working_directory:
+        description: The directory where package.json and package-lock.json exist
+        required: false
+        type: string
+        default: website
+      node-version-file:
+        required: false
+        type: string
+        default: website/.node-version
+      build_dir:
+        description: The directory where the built files are output
+        required: false
+        type: string
+        default: website/build
+      publish_branch:
+        description: The branch where the built files are pushed
+        required: false
+        type: string
+        default: gh-pages
+      destination_dir:
+        description: The directory in publish_branch where the built files are pushed
+        required: false
+        type: string
+        default: docs
+      issue_number:
+        description: |
+          The issue number to notify the result.
+          The issue is reopened if the workflow fails, and is closed if it succeeds.
+        required: false
+        type: string
+      dry_run:
+        description: If this is true, the built files aren't pushed and the result isn't notified. This is used to test this workflow
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      TAKUMI_GUARD_BOT_ID:
+        required: false
+
+permissions: {}
+
+jobs:
+  build:
+    uses: $/.github/workflows/build.yaml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      repository: ${{inputs.repository}}
+      ref: ${{inputs.ref}}
+      working_directory: ${{inputs.working_directory}}
+      node-version-file: ${{inputs.node-version-file}}
+      build_dir: ${{inputs.build_dir}}
+      upload: true
+      artifact_name: document-release
+    secrets:
+      TAKUMI_GUARD_BOT_ID: ${{secrets.TAKUMI_GUARD_BOT_ID}}
+
+  # Push the built files with contents: write.
+  # This job doesn't run code of the repository and npm packages.
+  publish:
+    timeout-minutes: 15
+    runs-on: ubuntu-26.04
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - name: Download the built files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: document-release
+          path: ${{runner.temp}}/release-doc-action/document
+
+      # The artifact is created by the build job, which runs code of dependencies.
+      # Reject unexpected files so that a compromised build job can't affect the git repository of publish_branch.
+      - name: Validate the built files
+        run: |
+          dir=$RUNNER_TEMP/release-doc-action/document
+          invalid=$(find "$dir" \( -name .git -o -type l \) -print)
+          if [ -n "$invalid" ]; then
+            echo "::error::Unexpected files in the artifact"
+            echo "$invalid"
+            exit 1
+          fi
+
+      - name: Push the built files
+        if: ${{ !inputs.dry_run }}
+        uses: suzuki-shunsuke/gh-pages-action@ce95bfca768d3d1a0454f8efb6f81a557a18bc68 # v0.1.0
+        with:
+          publish_dir: ${{runner.temp}}/release-doc-action/document
+          publish_branch: ${{inputs.publish_branch}}
+          destination_dir: ${{inputs.destination_dir}}
+
+  notify:
+    timeout-minutes: 10
+    runs-on: ubuntu-26.04
+    needs:
+      - build
+      - publish
+    if: |
+      !cancelled() && inputs.issue_number != '' && !inputs.dry_run
+    permissions:
+      issues: write
+    steps:
+      - uses: suzuki-shunsuke/notify-workflow-error-action@e5e8817e62eb122231d162dbc8309c4d05a21b2e # v0.1.0
+        with:
+          issue_number: ${{inputs.issue_number}}
+          status: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 'failure' || 'success' }}

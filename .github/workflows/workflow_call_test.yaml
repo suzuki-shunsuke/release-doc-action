@@ -1,0 +1,58 @@
+---
+permissions: {}
+on:
+  workflow_call:
+    secrets:
+      TAKUMI_GUARD_BOT_ID:
+        required: false
+jobs:
+  test:
+    uses: suzuki-shunsuke/test-workflow/.github/workflows/test.yaml@0b89b9b4314282810bc944364380568708208eaa # v0.0.2
+    with:
+      aqua_version: v2.65.2
+    permissions:
+      pull-requests: read
+      contents: read
+
+  # Build the document of another repository.
+  # The path filter is disabled because this repository doesn't have documents.
+  test-doc:
+    uses: $/.github/workflows/test.yaml
+    permissions:
+      pull-requests: read
+      contents: read
+      id-token: write
+    with:
+      repository: suzuki-shunsuke/tfcmt
+      ref: 671a0a34185aac930fa29bbda285b24e6d2610f9
+      paths: ""
+    secrets:
+      TAKUMI_GUARD_BOT_ID: ${{secrets.TAKUMI_GUARD_BOT_ID}}
+
+  # website/** isn't changed in this repository, so the document isn't built
+  test-doc-path-filter:
+    uses: $/.github/workflows/test.yaml
+    permissions:
+      pull-requests: read
+      contents: read
+      id-token: write
+    with:
+      repository: suzuki-shunsuke/tfcmt
+      ref: 671a0a34185aac930fa29bbda285b24e6d2610f9
+    secrets:
+      TAKUMI_GUARD_BOT_ID: ${{secrets.TAKUMI_GUARD_BOT_ID}}
+
+  # Build the document and validate the built files without pushing them
+  release-doc:
+    uses: $/.github/workflows/release.yaml
+    permissions:
+      contents: write
+      issues: write
+      id-token: write
+    with:
+      repository: suzuki-shunsuke/tfcmt
+      ref: 671a0a34185aac930fa29bbda285b24e6d2610f9
+      issue_number: "1" # Not notified because of dry_run
+      dry_run: true
+    secrets:
+      TAKUMI_GUARD_BOT_ID: ${{secrets.TAKUMI_GUARD_BOT_ID}}
