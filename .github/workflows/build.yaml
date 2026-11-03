@@ -54,7 +54,7 @@ permissions: {}
 jobs:
   # Install npm packages through Takumi Guard, which requires id-token: write.
   npm:
-    uses: suzuki-shunsuke/download-npm-package-action/.github/workflows/download.yaml@cd93d0e45a1804793f6daaf4c24bf55ccf12f494 # v0.0.4
+    uses: suzuki-shunsuke/download-npm-package-action/.github/workflows/download.yaml@v0.0.4
     permissions:
       contents: read
       id-token: write
@@ -77,19 +77,19 @@ jobs:
       contents: read
     steps:
       - name: Checkout the commit where npm packages were installed
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           repository: ${{inputs.repository}}
           ref: ${{needs.npm.outputs.sha}}
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: ${{inputs.node-version-file}}
 
       - name: Restore node_modules
-        uses: suzuki-shunsuke/download-npm-package-action/restore@cd93d0e45a1804793f6daaf4c24bf55ccf12f494 # v0.0.4
+        uses: suzuki-shunsuke/download-npm-package-action/restore@v0.0.4
         with:
           working_directory: ${{inputs.working_directory}}
           artifact_name: node_modules-${{inputs.artifact_name}}
@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload the built files
         if: inputs.upload
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{inputs.artifact_name}}
           path: ${{inputs.build_dir}}
