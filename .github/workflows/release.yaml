@@ -79,7 +79,7 @@ jobs:
       contents: write
     steps:
       - name: Download the built files
-        uses: actions/download-artifact@v8.0.2
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: document-release
           path: ${{runner.temp}}/release-doc-action/document
@@ -98,7 +98,7 @@ jobs:
 
       - name: Push the built files
         if: ${{ !inputs.dry_run }}
-        uses: suzuki-shunsuke/gh-pages-action@v0.1.0
+        uses: suzuki-shunsuke/gh-pages-action@ce95bfca768d3d1a0454f8efb6f81a557a18bc68 # v0.1.0
         with:
           publish_dir: ${{runner.temp}}/release-doc-action/document
           publish_branch: ${{inputs.publish_branch}}
@@ -115,7 +115,7 @@ jobs:
     permissions:
       issues: write
     steps:
-      - uses: suzuki-shunsuke/notify-workflow-error-action@v0.1.0
+      - uses: suzuki-shunsuke/notify-workflow-error-action@e5e8817e62eb122231d162dbc8309c4d05a21b2e # v0.1.0
         with:
           issue_number: ${{inputs.issue_number}}
           status: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 'failure' || 'success' }}
